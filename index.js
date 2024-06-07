@@ -25,7 +25,14 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
 
-   
+    const productCollection = client.db("techBuzz").collection("products");
+
+     // products apis
+     app.get("/featuredProducts", async (req, res) => {
+      const query={isFeatured : true}
+      const result = await productCollection.find(query).toArray();
+      res.send(result);
+    });
     
    
 
