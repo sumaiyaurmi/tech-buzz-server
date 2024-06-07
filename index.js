@@ -25,19 +25,31 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
 
-    const productCollection = client.db("techBuzz").collection("products");
+    const productssCollection = client.db("techBuzzDB").collection("productsss");
 
      // products apis
      app.get("/featuredProducts", async (req, res) => {
       const query={isFeatured : true}
-      const result = await productCollection.find(query).toArray();
+      const result = await productssCollection.find(query).toArray();
       res.send(result);
     });
     
    
+    app.patch("/featuredProducts/:id", async (req, res) => {
+      const id = req.params.id;
+      const votes = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDocs = {
+        $set: {
+          ...votes,
+        },
+      };
+      const result = await productssCollection.updateOne(query, updateDocs);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
+    await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
