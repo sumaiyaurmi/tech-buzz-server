@@ -25,16 +25,18 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
 
-    const productssCollection = client.db("techBuzzDB").collection("productsss");
+    const productssCollection = client
+      .db("techBuzzDB")
+      .collection("productsss");
+    const trendingCollection = client.db("techBuzzDB").collection("trendings");
 
-     // products apis
-     app.get("/featuredProducts", async (req, res) => {
-      const query={isFeatured : true}
+    // products apis
+    app.get("/featuredProducts", async (req, res) => {
+      const query = { isFeatured: true };
       const result = await productssCollection.find(query).toArray();
       res.send(result);
     });
-    
-   
+
     app.patch("/featuredProducts/:id", async (req, res) => {
       const id = req.params.id;
       const votes = req.body;
@@ -45,6 +47,27 @@ async function run() {
         },
       };
       const result = await productssCollection.updateOne(query, updateDocs);
+      res.send(result);
+    });
+
+    // trendings apis
+    app.get("/trendingsProducts", async (req, res) => {
+      const result = await trendingCollection.find().toArray();
+      res.send(result);
+    });
+
+
+    app.patch("/trendingsProducts/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const votes = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDocs = {
+        $set: {
+          ...votes,
+        },
+      };
+      const result = await trendingCollection.updateOne(query, updateDocs);
       res.send(result);
     });
 
@@ -64,5 +87,5 @@ app.get("/", (req, res) => {
   res.send("Tech Buzz server is running");
 });
 app.listen(port, () => {
-  console.log( `Tech Buzz running on port ${port}`);
+  console.log(`Tech Buzz running on port ${port}`);
 });
