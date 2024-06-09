@@ -31,10 +31,23 @@ async function run() {
     // products apis
 
     // get all submitted assignment by Specefic User
+    app.get("/products", async (req, res) => {
+      const result = await productssCollection.find().toArray();
+      res.send(result);
+    });
+
     app.get("/products/:email", async (req, res) => {
       const email = req.params.email;
       const query = { 'Owner.email': email };
       const result = await productssCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    
+    app.get("/productss/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await productssCollection.findOne(query);
       res.send(result);
     });
 
@@ -44,7 +57,30 @@ async function run() {
       res.send(result);
     });
 
-  
+    app.delete("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await productssCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.put("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const productData = req.body;
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateDocs = {
+        $set: {
+          ...productData,
+        },
+      };
+      const result = await productssCollection.updateOne(
+        query,
+        updateDocs,
+        options
+      );
+      res.send(result);
+    });
 
     app.get("/featuredProducts", async (req, res) => {
       const query = { isFeatured: true };
