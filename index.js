@@ -26,8 +26,11 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
 
-    const productssCollection = client.db("techBuzzDB").collection("productsss");
+    const productssCollection = client
+      .db("techBuzzDB")
+      .collection("productsss");
     const trendingCollection = client.db("techBuzzDB").collection("trendings");
+    const userCollection = client.db("techBuzzDB").collection("users");
 
     // jwt api
     app.post("/jwt", async (req, res) => {
@@ -38,8 +41,8 @@ async function run() {
       res.send({ token });
     });
 
-     //  middlewares
-     const verifyToken = (req, res, next) => {
+    //  middlewares
+    const verifyToken = (req, res, next) => {
       console.log("inside verify token", req.headers.authorization);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "unauthorized access" });
@@ -55,6 +58,79 @@ async function run() {
       });
     };
 
+    // verify ADmin
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+    // verify ADmin
+    const verifyModerator = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isModerator = user?.role === "moderator";
+      if (!isMOderator) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
+    // user apis
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      // insert email if user doesnt exists:
+      const query = { email: user.email };
+      const exitingUser = await userCollection.findOne(query);
+      if (exitingUser) {
+        return res.send({ message: "user already exists", insertedId: null });
+      }
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const result = await userCollection.findOne(query);
+      res.send(result);
+    });
+
+    // make admin
+    app.patch("/users/admin/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateAdmin = {
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updateAdmin);
+      res.send(result);
+    });
+    // make moderator
+    app.patch("/users/moderator/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateAdmin = {
+        $set: {
+          role: "moderator",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updateAdmin);
+      res.send(result);
+    });
+
     // products apis
     app.get("/products", async (req, res) => {
       const result = await productssCollection.find().toArray();
@@ -63,12 +139,11 @@ async function run() {
 
     app.get("/products/:email", async (req, res) => {
       const email = req.params.email;
-      const query = { 'Owner.email': email };
+      const query = { "Owner.email": email };
       const result = await productssCollection.find(query).toArray();
       res.send(result);
     });
 
-    
     app.get("/productss/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
