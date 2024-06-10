@@ -107,29 +107,39 @@ async function run() {
     });
 
     // make admin
-    app.patch("/users/admin/:id", verifyToken, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateAdmin = {
-        $set: {
-          role: "admin",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updateAdmin);
-      res.send(result);
-    });
+    app.patch(
+      "/users/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateAdmin = {
+          $set: {
+            role: "admin",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updateAdmin);
+        res.send(result);
+      }
+    );
     // make moderator
-    app.patch("/users/moderator/:id", verifyToken, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateAdmin = {
-        $set: {
-          role: "moderator",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updateAdmin);
-      res.send(result);
-    });
+    app.patch(
+      "/users/moderator/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateAdmin = {
+          $set: {
+            role: "moderator",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updateAdmin);
+        res.send(result);
+      }
+    );
 
     // products apis
     app.get("/products", async (req, res) => {
@@ -179,6 +189,21 @@ async function run() {
         updateDocs,
         options
       );
+      res.send(result);
+    });
+
+    // update bid status
+    app.patch("/users/status/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.body;
+     console.log(status)
+      const query = { _id: new ObjectId(id) };
+      const updateDocs = {
+        $set: {
+          ...status,
+        },
+      };
+      const result = await productssCollection.updateOne(query, updateDocs);
       res.send(result);
     });
 
