@@ -321,6 +321,36 @@ async function run() {
       const result = await couponCollection.insertOne(couponData);
       res.send(result);
     });
+app.get("/coupons/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await couponCollection.findOne(query)
+  res.send(result);
+});
+app.put("/coupons/:id", async (req, res) => {
+  const id = req.params.id;
+  const couponData = req.body;
+  const query = { _id: new ObjectId(id) };
+  const options = { upsert: true };
+  const updateDocs = {
+    $set: {
+      ...couponData,
+    },
+  };
+  const result = await couponCollection.updateOne(
+    query,
+    updateDocs,
+    options
+  );
+  res.send(result);
+});
+
+app.delete("/coupon/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await couponCollection.deleteOne(query);
+  res.send(result);
+});
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
