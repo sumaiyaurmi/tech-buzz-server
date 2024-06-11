@@ -31,6 +31,8 @@ async function run() {
       .collection("productsss");
     const trendingCollection = client.db("techBuzzDB").collection("trendings");
     const userCollection = client.db("techBuzzDB").collection("users");
+    const reviewsCollection = client.db("techBuzzDB").collection("reviews");
+    const couponCollection = client.db("techBuzzDB").collection("coupons");
 
     // jwt api
     app.post("/jwt", async (req, res) => {
@@ -146,6 +148,11 @@ async function run() {
       const result = await productssCollection.find().toArray();
       res.send(result);
     });
+    app.get("/allProducts", async (req, res) => {
+      const query = { status: "accepted" };
+      const result = await productssCollection.find(query).toArray();
+      res.send(result);
+    });
 
     app.get("/products/:email", async (req, res) => {
       const email = req.params.email;
@@ -192,11 +199,11 @@ async function run() {
       res.send(result);
     });
 
-    // update bid status
+    // update products status
     app.patch("/users/status/:id", async (req, res) => {
       const id = req.params.id;
       const status = req.body;
-     console.log(status)
+      console.log(status);
       const query = { _id: new ObjectId(id) };
       const updateDocs = {
         $set: {
@@ -206,13 +213,64 @@ async function run() {
       const result = await productssCollection.updateOne(query, updateDocs);
       res.send(result);
     });
+    // update products status
+    app.patch("/productsFeatured/:id", async (req, res) => {
+      const id = req.params.id;
+      const isFeatured = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDocs = {
+        $set: {
+          ...isFeatured,
+        },
+      };
+      const result = await productssCollection.updateOne(query, updateDocs);
+      res.send(result);
+    });
 
+    // report
+    app.patch("/productsReport/:id", async (req, res) => {
+      const id = req.params.id;
+      const reported = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDocs = {
+        $set: {
+          ...reported,
+        },
+      };
+      const result = await productssCollection.updateOne(query, updateDocs);
+      res.send(result);
+    });
+    // get report products
+       app.get("/ReportedProducts", async (req, res) => {
+        const query = { reported: true };
+        const result = await productssCollection.find(query).toArray();
+        res.send(result);
+      });
+
+    // review get
+    app.get("/allReviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { productId: id };
+      const result = await reviewsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // review post
+    app.post("/productsReview", async (req, res) => {
+      const reviewData = req.body;
+      const result = await reviewsCollection.insertOne(reviewData);
+      res.send(result);
+    });
+
+
+    // featured product get
     app.get("/featuredProducts", async (req, res) => {
       const query = { isFeatured: true };
       const result = await productssCollection.find(query).toArray();
       res.send(result);
     });
 
+    // vote
     app.post("/products/:id/vote", async (req, res) => {
       const { id } = req.params;
       const result = await productssCollection.findOneAndUpdate(
@@ -222,6 +280,7 @@ async function run() {
       );
       res.send(result.value);
     });
+    
 
     // trendings apis
     app.get("/trendingsProducts", async (req, res) => {
@@ -237,6 +296,30 @@ async function run() {
         { returnOriginal: false }
       );
       res.send(result.value);
+    });
+
+    // admin states 
+    app.get('/admin-stats',async(req,res)=>{
+      const users=await userCollection.estimatedDocumentCount()
+      const products=await productssCollection.estimatedDocumentCount()
+      const reviews=await reviewsCollection.estimatedDocumentCount()
+
+       res.send({
+        users,
+        products,
+        reviews
+       })
+    })
+
+    //  coupon apis
+    app.get("/coupons", async (req, res) => {
+      const result = await couponCollection.find().toArray();
+      res.send(result);
+    });
+    app.post("/coupons", async (req, res) => {
+      const couponData = req.body;
+      const result = await couponCollection.insertOne(couponData);
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
