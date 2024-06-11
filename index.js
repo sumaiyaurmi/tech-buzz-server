@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
@@ -33,6 +34,7 @@ async function run() {
     const userCollection = client.db("techBuzzDB").collection("users");
     const reviewsCollection = client.db("techBuzzDB").collection("reviews");
     const couponCollection = client.db("techBuzzDB").collection("coupons");
+    const paymentCollection = client.db("techBuzzDB").collection("payments");
 
     // jwt api
     app.post("/jwt", async (req, res) => {
@@ -241,11 +243,11 @@ async function run() {
       res.send(result);
     });
     // get report products
-       app.get("/ReportedProducts", async (req, res) => {
-        const query = { reported: true };
-        const result = await productssCollection.find(query).toArray();
-        res.send(result);
-      });
+    app.get("/ReportedProducts", async (req, res) => {
+      const query = { reported: true };
+      const result = await productssCollection.find(query).toArray();
+      res.send(result);
+    });
 
     // review get
     app.get("/allReviews/:id", async (req, res) => {
@@ -261,7 +263,6 @@ async function run() {
       const result = await reviewsCollection.insertOne(reviewData);
       res.send(result);
     });
-
 
     // featured product get
     app.get("/featuredProducts", async (req, res) => {
@@ -280,7 +281,6 @@ async function run() {
       );
       res.send(result.value);
     });
-    
 
     // trendings apis
     app.get("/trendingsProducts", async (req, res) => {
@@ -298,18 +298,18 @@ async function run() {
       res.send(result.value);
     });
 
-    // admin states 
-    app.get('/admin-stats',async(req,res)=>{
-      const users=await userCollection.estimatedDocumentCount()
-      const products=await productssCollection.estimatedDocumentCount()
-      const reviews=await reviewsCollection.estimatedDocumentCount()
+    // admin states
+    app.get("/admin-stats", async (req, res) => {
+      const users = await userCollection.estimatedDocumentCount();
+      const products = await productssCollection.estimatedDocumentCount();
+      const reviews = await reviewsCollection.estimatedDocumentCount();
 
-       res.send({
+      res.send({
         users,
         products,
-        reviews
-       })
-    })
+        reviews,
+      });
+    });
 
     //  coupon apis
     app.get("/coupons", async (req, res) => {
@@ -321,36 +321,67 @@ async function run() {
       const result = await couponCollection.insertOne(couponData);
       res.send(result);
     });
-app.get("/coupons/:id", async (req, res) => {
-  const id = req.params.id;
-  const query = { _id: new ObjectId(id) };
-  const result = await couponCollection.findOne(query)
-  res.send(result);
-});
-app.put("/coupons/:id", async (req, res) => {
-  const id = req.params.id;
-  const couponData = req.body;
-  const query = { _id: new ObjectId(id) };
-  const options = { upsert: true };
-  const updateDocs = {
-    $set: {
-      ...couponData,
-    },
-  };
-  const result = await couponCollection.updateOne(
-    query,
-    updateDocs,
-    options
-  );
-  res.send(result);
-});
+    app.get("/coupons/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await couponCollection.findOne(query);
+      res.send(result);
+    });
+    app.put("/coupons/:id", async (req, res) => {
+      const id = req.params.id;
+      const couponData = req.body;
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateDocs = {
+        $set: {
+          ...couponData,
+        },
+      };
+      const result = await couponCollection.updateOne(
+        query,
+        updateDocs,
+        options
+      );
+      res.send(result);
+    });
 
-app.delete("/coupon/:id", async (req, res) => {
-  const id = req.params.id;
-  const query = { _id: new ObjectId(id) };
-  const result = await couponCollection.deleteOne(query);
-  res.send(result);
-});
+    app.delete("/coupon/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await couponCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // payment apis
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price, coupon_code } = req.body;
+      let discountPercent = 0;
+      const couponCode = await couponCollection.findOne({ coupon_code });
+      if (couponCode) {
+        discountPercent = couponCode.amount;
+      }
+      const amount = price * 100;
+      const discountAmount = (amount * discountPercent) / 100;
+      let discountedAmount = amount - discountAmount;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(discountedAmount),
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+        discountPercent,
+        discountedAmount: discountedAmount / 100,
+      });
+    });
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+
+      res.send(paymentResult);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
