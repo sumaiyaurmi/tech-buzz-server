@@ -146,7 +146,7 @@ async function run() {
     );
 
     // products apis
-    app.get("/products", verifyToken, verifyModerator, async (req, res) => {
+    app.get("/products", async (req, res) => {
       const result = await productssCollection.find().toArray();
       res.send(result);
     });
@@ -168,6 +168,8 @@ async function run() {
         .toArray();
       res.send(result);
     });
+    
+   
 
     app.get("/products/:email", async (req, res) => {
       const email = req.params.email;
@@ -327,7 +329,7 @@ async function run() {
     });
 
     // admin states
-    app.get("/admin-stats", verifyToken, verifyModerator, async (req, res) => {
+    app.get("/admin-stats", async (req, res) => {
       const users = await userCollection.estimatedDocumentCount();
       const products = await productssCollection.estimatedDocumentCount();
       const reviews = await reviewsCollection.estimatedDocumentCount();
@@ -340,22 +342,22 @@ async function run() {
     });
 
     //  coupon apis
-    app.get("/coupons", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/coupons", async (req, res) => {
       const result = await couponCollection.find().toArray();
       res.send(result);
     });
-    app.post("/coupons", verifyToken, verifyAdmin, async (req, res) => {
+    app.post("/coupons", async (req, res) => {
       const couponData = req.body;
       const result = await couponCollection.insertOne(couponData);
       res.send(result);
     });
-    app.get("/coupons/:id", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/coupons/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await couponCollection.findOne(query);
       res.send(result);
     });
-    app.put("/coupons/:id", verifyToken, verifyAdmin, async (req, res) => {
+    app.put("/coupons/:id", async (req, res) => {
       const id = req.params.id;
       const couponData = req.body;
       const query = { _id: new ObjectId(id) };
@@ -373,7 +375,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/coupon/:id", verifyToken, verifyAdmin, async (req, res) => {
+    app.delete("/coupon/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await couponCollection.deleteOne(query);
