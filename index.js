@@ -146,13 +146,26 @@ async function run() {
     );
 
     // products apis
-    app.get("/products", async (req, res) => {
+    app.get("/products", verifyToken, verifyModerator, async (req, res) => {
       const result = await productssCollection.find().toArray();
       res.send(result);
     });
+
+    // all products api
     app.get("/allProducts", async (req, res) => {
-      const query = { status: "accepted" };
-      const result = await productssCollection.find(query).toArray();
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
+      const filter = req.query;
+      console.log(filter);
+      const query = {
+        status: "accepted",
+        tags: { $regex: filter.search, $options: "i" },
+      };
+      const result = await productssCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
 
@@ -266,8 +279,15 @@ async function run() {
 
     // featured product get
     app.get("/featuredProducts", async (req, res) => {
+      const filter = req.query;
+      console.log(filter);
       const query = { isFeatured: true };
-      const result = await productssCollection.find(query).toArray();
+      const options = {
+        sort: {
+          timestamp: filter.sort === "asc" ? 1 : -1,
+        },
+      };
+      const result = await productssCollection.find(query, options).toArray();
       res.send(result);
     });
 
@@ -284,7 +304,15 @@ async function run() {
 
     // trendings apis
     app.get("/trendingsProducts", async (req, res) => {
-      const result = await trendingCollection.find().toArray();
+      const filter = req.query;
+      console.log(filter);
+      const query = {};
+      const options = {
+        sort: {
+          votes: filter.sort === "asc" ? 1 : -1,
+        },
+      };
+      const result = await trendingCollection.find(query, options).toArray();
       res.send(result);
     });
 
@@ -299,7 +327,7 @@ async function run() {
     });
 
     // admin states
-    app.get("/admin-stats", async (req, res) => {
+    app.get("/admin-stats", verifyToken, verifyModerator, async (req, res) => {
       const users = await userCollection.estimatedDocumentCount();
       const products = await productssCollection.estimatedDocumentCount();
       const reviews = await reviewsCollection.estimatedDocumentCount();
@@ -312,22 +340,22 @@ async function run() {
     });
 
     //  coupon apis
-    app.get("/coupons", async (req, res) => {
+    app.get("/coupons", verifyToken, verifyAdmin, async (req, res) => {
       const result = await couponCollection.find().toArray();
       res.send(result);
     });
-    app.post("/coupons", async (req, res) => {
+    app.post("/coupons", verifyToken, verifyAdmin, async (req, res) => {
       const couponData = req.body;
       const result = await couponCollection.insertOne(couponData);
       res.send(result);
     });
-    app.get("/coupons/:id", async (req, res) => {
+    app.get("/coupons/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await couponCollection.findOne(query);
       res.send(result);
     });
-    app.put("/coupons/:id", async (req, res) => {
+    app.put("/coupons/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const couponData = req.body;
       const query = { _id: new ObjectId(id) };
@@ -345,7 +373,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/coupon/:id", async (req, res) => {
+    app.delete("/coupon/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await couponCollection.deleteOne(query);
@@ -381,6 +409,11 @@ async function run() {
       const paymentResult = await paymentCollection.insertOne(payment);
 
       res.send(paymentResult);
+    });
+    app.get("/payment/:email", async (req, res) => {
+      const query = { email: req.params.email };
+      const result = await paymentCollection.findOne(query);
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
